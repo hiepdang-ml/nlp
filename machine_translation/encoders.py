@@ -21,18 +21,27 @@ class GRUEncoder(nn.Module):
         self.dropout: int = dropout
         self.vocabulary_size: int = vocabulary_size
 
-        self.embedding = nn.Embedding(num_embeddings=vocabulary_size, embedding_dim=embedding_dim)
-        self.gru = nn.GRU(input_size=embedding_dim, hidden_size=n_hiddens, num_layers=n_layers, dropout=dropout)
+        self.embedding = nn.Embedding(
+            num_embeddings=vocabulary_size, 
+            embedding_dim=embedding_dim,
+        )
+        self.gru = nn.GRU(
+            input_size=embedding_dim, 
+            hidden_size=n_hiddens, 
+            num_layers=n_layers, 
+            dropout=dropout, 
+            bidirectional=True
+        )
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         batch_size, n_steps = x.shape
-        embeddings: torch.Tensor = self.embedding(input=x.t().contiguous().type(dtype=torch.int64)) # shape (n_steps, batch_size, embedding_dim)
+        embeddings: torch.Tensor = self.embedding(input=x.t().contiguous().type(dtype=torch.int64)) # (n_steps, batch_size, embedding_dim)
         assert embeddings.shape == (n_steps, batch_size, self.embedding_dim)
         output: torch.Tensor
         final_state: torch.Tensor
         output, final_state = self.gru(input=embeddings)
-        assert output.shape == (n_steps, batch_size, self.n_hiddens)
-        assert final_state.shape == (self.n_layers, batch_size, self.n_hiddens)
+        assert output.shape == (n_steps, batch_size, self.n_hiddens * 2)
+        assert final_state.shape == (self.n_layers * 2, batch_size, self.n_hiddens)
         return output, final_state
 
 

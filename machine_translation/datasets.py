@@ -1,4 +1,4 @@
-from typing import Callable, List, Tuple, Dict, Literal, TextIO
+from typing import Callable, List, Tuple, Dict, Literal, TextIO, Optional
 from collections import Counter
 
 import torch
@@ -12,11 +12,13 @@ class EnglishFrenchDataset(Dataset):
     def __init__(
         self, 
         txt_path: str, 
-        num_steps: int,
-        device: torch.device,
+        max_samples: Optional[int] = None,
+        num_steps: int = 10,
+        device: torch.device = torch.device('cpu'),
     ) -> None:
         
         self.txt_path: str = txt_path
+        self.max_samples: Optional[int] = max_samples
         self.num_steps: int = num_steps
         self.device: torch.device = device
         file: TextIO
@@ -43,13 +45,13 @@ class EnglishFrenchDataset(Dataset):
     
     def __getitem__(self, index: int) -> Dict[Literal['source', 'target'], Tuple[torch.Tensor, int]]:
         return {
-            'source': (self.source_array[index], self.source_valid_len[index].item()),
-            'target': (self.target_array[index], self.target_valid_len[index].item()),
+            'source': (self.source_array[index], self.source_valid_len[index]),
+            'target': (self.target_array[index], self.target_valid_len[index]),
         }
 
     @staticmethod
     def __preprocess(text: str) -> str:
-    # Replace non-breaking space with space
+        # Replace non-breaking space with space
         text: str = text.replace('\u202f', ' ').replace('\xa0', ' ').lower()
         # Insert space between words and punctuation marks
         no_space: Callable[[str, str], bool] = lambda char, prev_char: char in ',.!?' and prev_char != ' '
@@ -61,14 +63,13 @@ class EnglishFrenchDataset(Dataset):
         ]
         return ''.join(out)
 
-    @staticmethod
-    def __tokenize(text: str) -> Tuple[List[List[str]], List[List[str]]]:
+    def __tokenize(self, text: str) -> Tuple[List[List[str]], List[List[str]]]:
         """
         Tokenize by word
         """
         sources: List[List[str]] = []
         targets: List[List[str]] = []
-        for line in text.split('\n'):
+        for line in text.split('\n')[:self.max_samples]:
             parts: List[str] = line.split('\t')
             if len(parts) == 2:
                 sources.append([t for t in f'<bos> {parts[0]} <eos>'.split()])
@@ -86,7 +87,8 @@ class EnglishFrenchDataset(Dataset):
         vocab = Vocabularies(tokens=[token for doc in docs_of_tokens for token in doc], min_freq=2)
         array: torch.Tensor = torch.tensor(
             [vocab.find_ids(tokens=doc) for doc in docs_of_tokens],
-            device=self.device
+            device=self.device,
+            dtype=torch.int64,
         )
         valid_len: torch.Tensor = (array != vocab.find_ids(tokens=['<pad>'])[0]).type(torch.int32).sum(dim=1)
         return vocab, array, valid_len
