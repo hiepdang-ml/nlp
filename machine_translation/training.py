@@ -93,6 +93,8 @@ class Trainer:
                 loss: torch.Tensor = self.loss_func(pred_tensor=output, gt_tensor=target_tensor[:, 1:])
                 # Backpropagation
                 loss.backward()
+                # Gradient clipping
+                nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 # Update weights
                 self.optimizer.step()
                 # Accumulate the metrics
@@ -140,17 +142,18 @@ class Trainer:
                 source_tensor: torch.Tensor = batch['source'][0]
                 target_tensor: torch.Tensor = batch['target'][0]
                 # Forward pass
-                output: torch.Tensor = self.model(enc_x=source_tensor, dec_x=target_tensor)[0]
+                output: torch.Tensor = self.model(enc_x=source_tensor, dec_x=target_tensor[:, :-1])[0]
+                # TODO: implement beam search
                 # Get predicted translations
                 best_token_ids: torch.Tensor = output.argmax(dim=2) # shape = (batch_size, n_steps)
                 pred_tokens: List[List[int]] = [self.dataset.target_vocab.find_tokens(ids=sample) for sample in best_token_ids.tolist()]
                 # Get grouth-truth translations
-                gt_tokens = [[self.dataset.target_vocab.find_tokens(ids=sample)] for sample in target_tensor.tolist()]
+                gt_tokens = [[self.dataset.target_vocab.find_tokens(ids=sample)] for sample in target_tensor[:, 1:].tolist()]
                 # Compute BLEU score
                 score: float = bleu_score(candidate_corpus=pred_tokens, references_corpus=gt_tokens, max_n=4)
                 val_metrics.add(bleu_score=score)
                 # Compute loss
-                loss: float = self.loss_func(pred_tensor=output, gt_tensor=target_tensor).item()
+                loss: float = self.loss_func(pred_tensor=output, gt_tensor=target_tensor[:, 1:]).item()
                 val_metrics.add(loss=loss)
 
         mean_bleu_score: float = val_metrics['bleu_score'] / len(self.val_dataloader)

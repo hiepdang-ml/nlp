@@ -38,7 +38,7 @@ class Seq2Seq(nn.Module):
                     encoder_output=enc_output, 
                     encoder_final_state=enc_final_state, 
                 )[0]
-                predicted_next_token_id = dec_output.argmax(dim=2)[0, -1].item()
+                predicted_next_token_id: int = dec_output.argmax(dim=2)[0, -1].item()
                 target_token_ids.append(predicted_next_token_id)
 
         return target_token_ids

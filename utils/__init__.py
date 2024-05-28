@@ -247,7 +247,7 @@ class Logger:
             prefix += f'Took {took:.2f}s | '
         logstring: str = prefix + suffix
         print(logstring)
-        # self._file.write(logstring + '\n')
+        self._file.write(logstring + '\n')
 
     def __del__(self) -> None:
         """
