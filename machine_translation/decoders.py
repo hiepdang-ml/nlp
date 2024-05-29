@@ -188,7 +188,7 @@ class GRUWithAdditiveAttentionDecoder(nn.Module):
                 queries=query,
                 keys=combined_output,
                 values=combined_output,
-                valid_query_dim=None,   # No mask
+                valid_query_dims=None,   # No mask
             )
             assert context.shape == (batch_size, 1, self.n_hiddens) # key_dim == value_dim == self.n_hiddens
             assert attention_score.shape == (batch_size, 1, combined_output.shape[1]) # n_keys == number of steps

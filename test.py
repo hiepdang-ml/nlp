@@ -4,6 +4,7 @@ import torch.nn as nn
 from machine_translation.seq2seq import *
 from machine_translation.encoders import *
 from machine_translation.decoders import *
+from attention import *
 
 
 
@@ -28,18 +29,17 @@ from machine_translation.decoders import *
 
 
 
-# Example usage
-encoder = GRUEncoder(vocabulary_size=10000, embedding_dim=64, n_hiddens=256, n_layers=2, dropout=0.2)
-decoder = GRUWithAdditiveAttentionDecoder(vocabulary_size=10000, embedding_dim=64, n_hiddens=256, n_layers=2, dropout=0.2)
+num_hiddens, num_heads = 100, 5
+batch_size, num_queries, num_kvpairs = 2, 4, 6
 
-src = torch.randint(0, 10000, (32, 10))  # Example input
-tgt = torch.randint(0, 10000, (32, 10))  # Example target
+valid_lens = torch.tensor([3, 2])
+X = torch.ones((batch_size, num_queries, num_hiddens))
+Y = torch.ones((batch_size, num_kvpairs, num_hiddens))
 
-encoder_output, encoder_final_state = encoder(src)
-outputs, attention_scores = decoder(tgt, encoder_output, encoder_final_state)
+attention1 = EfficientMultiHeadAttention(model_dim=num_hiddens, n_heads=num_heads, dropout=0.5, bias=False)
+r1 = attention1(X, Y, Y, valid_lens)
 
-print(outputs.shape)  # Should be (batch_size, n_steps, vocabulary_size)
-print(attention_scores[0].shape)  # Should be (batch_size, n_queries, n_keys)
-
+attention2 = MultiHeadAttention(model_dim=num_hiddens, n_heads=num_heads, dropout=0.5, bias=False)
+r2 = attention2(X, Y, Y, valid_lens)
 
 
