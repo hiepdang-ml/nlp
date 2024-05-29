@@ -149,6 +149,8 @@ class EfficientMultiHeadAttention(BaseAttention):
     def __init__(
         self, 
         model_dim: int, 
+        key_dim: int,
+        value_dim: int,
         n_heads: int, 
         bias: bool, 
         dropout: float, 
@@ -156,6 +158,9 @@ class EfficientMultiHeadAttention(BaseAttention):
         
         super().__init__()
         self.model_dim: int = model_dim
+        self.query_dim: int = key_dim   # condition of ScaledDotProductAttention and thereby Multihead Attention in general
+        self.key_dim: int = key_dim
+        self.value_dim: int = value_dim
         self.n_heads: int = n_heads
         self.dropout: float = dropout
 
@@ -165,10 +170,10 @@ class EfficientMultiHeadAttention(BaseAttention):
             self.dim_per_head: int = model_dim // n_heads
 
         self.attention = ScaledDotProductAttention(dropout)
-        self.W_q = nn.Linear(in_features=model_dim, out_features=model_dim, bias=bias)
-        self.W_k = nn.Linear(in_features=model_dim, out_features=model_dim, bias=bias)
-        self.W_v = nn.Linear(in_features=model_dim, out_features=model_dim, bias=bias)
-        self.W_o = nn.Linear(in_features=model_dim, out_features=model_dim, bias=bias)
+        self.W_q = nn.Linear(in_features=self.query_dim, out_features=model_dim, bias=bias)
+        self.W_k = nn.Linear(in_features=self.query_dim, out_features=model_dim, bias=bias)
+        self.W_v = nn.Linear(in_features=self.value_dim, out_features=model_dim, bias=bias)
+        self.W_o = nn.Linear(in_features=model_dim, out_features=self.n_heads * self.value_dim, bias=bias)
 
     def forward(
         self,
